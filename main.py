@@ -10,9 +10,13 @@ from sqlalchemy import Integer, String, Text, ForeignKey
 from typing import List
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-# Import your forms from the forms.py
+# Import forms from the forms.py
 from forms import CreatePostForm, RegistrationForm, LoginForm, CommentForm
 import os
+from dotenv import load_dotenv
+
+#Load environmental variables
+load_dotenv()
 
 
 
@@ -56,7 +60,7 @@ def search_user_by_email(email):
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///posts.db")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(key="DB_URI", default="sqlite:///posts.db")
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
