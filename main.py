@@ -157,7 +157,6 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         email = form.email.data
-        print(email)
         password = form.password.data
 
         user = search_user_by_email(email)

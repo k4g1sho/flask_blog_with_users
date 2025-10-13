@@ -51,11 +51,12 @@
                 <img src="../static/assets/img/default-profile.jpg" />
               </div>
               <div class="commentText">
-                <p>{{item.text}}</p>
+                <!--Safe flag to render the text instead of plain text-->
+                {{item.text | safe}}
                 <span class="date sub-text">{{item.comment_author.user_name}}</span>
-                {%endfor%}
               </div>
             </li>
+            {%endfor%}
           </ul>
         </div>
       </div>
