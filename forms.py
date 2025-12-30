@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, EmailField
-from wtforms.validators import DataRequired, URL
+from wtforms import StringField, SubmitField, EmailField, IntegerField, TextAreaField
+from wtforms.validators import DataRequired, URL, Length, Regexp, Optional
 from flask_ckeditor import CKEditorField
 
 
@@ -11,7 +11,6 @@ class CreatePostForm(FlaskForm):
     img_url = StringField("Blog Image URL", validators=[DataRequired(), URL()])
     body = CKEditorField("Blog Content", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
-
 
 # TODO: Create a RegisterForm to register new users
 class RegistrationForm(FlaskForm):
@@ -30,3 +29,12 @@ class LoginForm(FlaskForm):
 class CommentForm(FlaskForm):
     comment = CKEditorField("Leave a comment", validators=[DataRequired()])
     submit = SubmitField("Submit")
+
+# TODO: Create a Contacts form
+class ContactForm(FlaskForm):
+    name = StringField(label="Name",validators=[Length(max=40), DataRequired()])
+    company = StringField(label="Company",validators=[Length(max=40),Optional()])
+    email = StringField(label="Contact Email",validators=[Length(max=40),DataRequired()])
+    phone_number = StringField(label="Cellphone Number",validators=[Optional(),Length(min=10,max=14),Regexp(r'^[+0-9-]+$',message='Invalid Phone number format')])
+    message = TextAreaField(label="Message",validators=[Length(max=1000),DataRequired()])
+    submit = SubmitField(label='Submit')

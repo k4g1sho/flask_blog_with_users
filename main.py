@@ -2,7 +2,6 @@ from datetime import date
 from flask import Flask, abort, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
-# from flask_gravatar import Gravatar - broken with current version
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -10,10 +9,12 @@ from sqlalchemy import Integer, String, Text, ForeignKey
 from typing import List
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-# Import forms from the forms.py
-from forms import CreatePostForm, RegistrationForm, LoginForm, CommentForm
+# Import forms from the forms.py.
+from forms import CreatePostForm, RegistrationForm, LoginForm, CommentForm, ContactForm
 import os
 from dotenv import load_dotenv
+# Import email_sender module.
+from email_sender import SENDMAIL
 
 #Load environmental variables
 load_dotenv()
@@ -25,18 +26,8 @@ app.config['SECRET_KEY'] = os.environ.get("app_secret")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
-#TODO add gravitator images
-# #gravator_url for profile images - curently broken
-# gravatar = Gravatar(app,
-#                     size=100,
-#                     rating='g',
-#                     default='retro',
-#                     force_default=False,
-#                     use_ssl=False,
-#                     base_url=None)
 
-
-# TODO: Configure Flask-Login
+# TODO: Configure Flask-Login.
 login_manager = LoginManager()
 login_manager.init_app(app)
 @login_manager.user_loader
@@ -45,7 +36,7 @@ def load_user(user_id):
 
 
 def search_user_by_email(email):
-    'Search database of users by email, returns user or None'
+    '''Search database of users by email, returns user or None'''
     try:
         user = db.one_or_404( db.select(User).filter_by(email=email),
     description=(f"No '{email}' email in user database."))
@@ -57,7 +48,7 @@ def search_user_by_email(email):
     finally:
         return user
 
-# CREATE DATABASE
+# CREATE DATABASE.
 class Base(DeclarativeBase):
     pass
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(key="DB_URI", default="sqlite:///posts.db")
@@ -65,7 +56,7 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 
-# CONFIGURE TABLES
+# CONFIGURE TABLES.
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -75,11 +66,11 @@ class BlogPost(db.Model):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     img_url: Mapped[str] = mapped_column(String(250), nullable=False)
 
-    #Linking it to users table
+    # Linking it to users table.
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     author: Mapped["User"] = relationship(back_populates="posts")
 
-    #Linking to Comment table
+    #Linking to Comment table.
     post_comments : Mapped[List["Comment"]] = relationship(back_populates="parent_post")
 
 # TODO: Create a User table for all your registered users. 
@@ -90,24 +81,24 @@ class User(db.Model,UserMixin):
     email: Mapped[str] = mapped_column(String,unique=True)
     password: Mapped[str]
 
-    #relation linking it to blog_post table
+    #relation linking it to blog_post table.
     posts: Mapped[List["BlogPost"]] = relationship(back_populates="author")
 
-    #relation link to comments
+    #relation link to comments.
     comment: Mapped[List["Comment"]] = relationship(back_populates="comment_author")
     
 
-# TODO: Create a comments table
+# TODO: Create a comments table.
 class Comment(db.Model):
     __tablename__ = "comment"
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     text: Mapped[str] = mapped_column(Text,unique=False)
 
-    #linking to User
+    # Linking to User.
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     comment_author: Mapped["User"] = relationship(back_populates="comment")
 
-    #Linking to block posts
+    # Linking to block posts.
     post_id: Mapped[int] = mapped_column(ForeignKey("blog_posts.id"))
     parent_post : Mapped["BlogPost"] = relationship(back_populates="post_comments")
 
@@ -122,7 +113,7 @@ def admin_only(f):
     def decorated_function(*args, **kwargs):
         if current_user is None:
             return redirect(url_for('login'))
-        #If id is not 1 then return abort with 403 error
+        #If id is not 1 then return abort with 403 error.
         if current_user.is_anonymous:
             abort(403)
         if current_user.id != 1:
@@ -160,7 +151,7 @@ def login():
         password = form.password.data
 
         user = search_user_by_email(email)
-        # Check user and password
+        # Check user and password.
         if user is None:
             flash("Incorrect username, Please enter correct username")
             print('incorrect username')
@@ -189,7 +180,7 @@ def get_all_posts():
     return render_template("index.html", all_posts=posts)
 
 
-# TODO: Allow logged-in users to comment on posts
+# TODO: Allow logged-in users to comment on posts.
 @app.route("/post/<int:post_id>", methods = ["GET","POST"])
 def show_post(post_id):
     try:
@@ -216,7 +207,7 @@ def show_post(post_id):
     return render_template("post.html", post=requested_post, form=form, comments = requested_post.post_comments)
 
 
-# TODO: Use a decorator so only an admin user can create a new post
+# TODO: Use a decorator so only an admin user can create a new post.
 @app.route("/new-post", methods=["GET", "POST"])
 @admin_only
 @login_required
@@ -237,7 +228,7 @@ def add_new_post():
     return render_template("make-post.html", form=form)
 
 
-# TODO: Use a decorator so only an admin user can edit a post
+# TODO: Use a decorator so only an admin user can edit a post.
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only
 def edit_post(post_id):
@@ -261,7 +252,7 @@ def edit_post(post_id):
     return render_template("make-post.html", form=edit_form, is_edit=True)
 
 
-# TODO: Use a decorator so only an admin user can delete a post
+# TODO: Use a decorator so only an admin user can delete a post.
 @app.route("/delete/<int:post_id>")
 @admin_only
 def delete_post(post_id):
@@ -275,11 +266,43 @@ def delete_post(post_id):
 def about():
     return render_template("about.html")
 
-#TODO: Fix the contact me page
+#TODO: Fix the contact me page.
 @app.route("/contact", methods =["GET","POST"])
 def contact():
-    return render_template("contact.html")
+    contact_form = ContactForm()
+
+    if contact_form.validate_on_submit():
+        # Contact form Data
+        name = contact_form.name.data
+        company = contact_form.company.data
+        email = contact_form.email.data
+        phone_number = contact_form.phone_number.data
+        message = contact_form.message.data
+
+        # Format and send email.
+        # Initializing email_sender class object.
+        mail = SENDMAIL()
+        subject = 'Contact from Blog'
+        body = f'{message}\n\nKind Regards\nname: {name} \nCompany {company} \nnumber :{phone_number}'
+
+        # Gmail authentication data.
+        sender = os.getenv('sender_email')
+        reciever_email = os.getenv('reciever_email')
+        gmail_app_password = os.getenv('gmail_app_password')
+
+        # Sending the email.
+        try:
+            mail.send_email(sender,reciever_email,gmail_app_password,subject,body)
+            flash('Message sent')
+        except NameError as e:
+            print(e)
+        except Exception as e:
+            print(e)
+        else:
+            print("No exceptions caught")
+
+    return render_template("contact.html",form=contact_form)
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
