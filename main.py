@@ -305,5 +305,11 @@ def contact():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get(key='PORT',default=5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    # Set environmental variable LIVE to anything.
+    if os.environ.get(key='LIVE',default= None):
+        # Run without debugging
+        app.run(debug=False)
+    else:
+        # if environmental file is not detected. Use local, with open port to allow 
+        # other devices to get access to server. With Debuging.
+        app.run(host='0.0.0.0', debug=True)
